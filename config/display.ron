@@ -1,0 +1,4 @@
+(
+  title: "tower-defense",
+  dimensions: Some((500, 500)),
+)
