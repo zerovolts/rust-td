@@ -1,19 +1,59 @@
+#[macro_use]
+extern crate specs_derive;
+
+mod velocity;
+mod projectile;
+mod tower;
+mod sprite;
+
 use amethyst::{
-    core::transform::TransformBundle,
-    ecs::prelude::{ReadExpect, Resources, SystemData},
     prelude::*,
+    assets::{AssetStorage, Loader, Handle},
+    core::{
+        transform::{Transform, TransformBundle},
+        math::{Vector3},
+    },
+    ecs::prelude::{
+        System,
+        Join,
+    },
     renderer::{
+        Camera,
         plugins::{RenderFlat2D, RenderToWindow},
         types::DefaultBackend,
         RenderingBundle,
+        SpriteSheet,
+        SpriteSheetFormat,
+        ImageFormat,
+        SpriteRender,
+        Texture,
     },
-    utils::application_root_dir,
+    utils::application_root_dir, 
 };
 
-struct MyState;
+use crate::{
+    velocity::{Velocity, VelocitySystem},
+    projectile::{create_projectile},
+    tower::{TowerSystem, create_tower},
+    sprite::{SpriteSheetMap, AssetType, load_spritesheet},
+};
 
-impl SimpleState for MyState {
-    fn on_start(&mut self, _data: StateData<'_, GameData<'_, '_>>) {}
+struct GameplayState;
+
+impl SimpleState for GameplayState {
+    fn on_start(&mut self, data: StateData<'_, GameData<'_, '_>>) {
+        let world = data.world;
+
+        let sprite_sheet_map = SpriteSheetMap::new(world);
+        let sprite_sheet = sprite_sheet_map.get(AssetType::Floor).unwrap();
+
+        create_enemy(world, sprite_sheet.clone(), Vector3::new(8.0, 200.0, 0.0));
+        let tower_pos = Vector3::new(128.0, 8.0, 0.0);
+        create_tower(world, sprite_sheet.clone(), tower_pos);
+
+        world.add_resource(sprite_sheet_map);
+        init_camera(world);
+    }
 }
 
 fn main() -> amethyst::Result<()> {
@@ -33,10 +73,45 @@ fn main() -> amethyst::Result<()> {
                 )
                 .with_plugin(RenderFlat2D::default()),
         )?
-        .with_bundle(TransformBundle::new())?;
+        .with_bundle(TransformBundle::new())?
+        .with(VelocitySystem, "velocity_system", &[])
+        .with(TowerSystem, "tower_system", &[]);
 
-    let mut game = Application::new("/", MyState, game_data)?;
+    let mut game = Application::new("assets/", GameplayState, game_data)?;
     game.run();
 
     Ok(())
+}
+
+pub const SCREEN_WIDTH: f32 = 320.0;
+pub const SCREEN_HEIGHT: f32 = 240.0;
+
+fn init_camera(world: &mut World) {
+    let mut transform = Transform::default();
+    transform.set_translation_xyz(SCREEN_WIDTH * 0.5, SCREEN_HEIGHT * 0.5, 1.0);
+
+    world.create_entity()
+        .with(Camera::standard_2d(SCREEN_WIDTH, SCREEN_HEIGHT))
+        .with(transform)
+        .build();
+}
+
+fn create_enemy(world: &mut World, sprite_sheet: Handle<SpriteSheet>, origin: Vector3<f32>) {
+    let enemy_sprite = SpriteRender {
+        sprite_sheet: sprite_sheet.clone(),
+        sprite_number: 2,
+    };
+
+    let mut transform = Transform::default();
+    transform.set_translation(origin);
+
+    let velocity = Velocity {
+        vector: Vector3::new(0.25, 0.0, 0.0),
+    };
+
+    world.create_entity()
+        .with(enemy_sprite)
+        .with(transform)
+        .with(velocity)
+        .build();
 }
