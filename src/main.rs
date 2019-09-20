@@ -5,6 +5,7 @@ mod velocity;
 mod projectile;
 mod tower;
 mod sprite;
+mod enemy;
 
 use amethyst::{
     prelude::*,
@@ -36,6 +37,7 @@ use crate::{
     projectile::{create_projectile},
     tower::{TowerSystem, create_tower},
     sprite::{SpriteSheetMap, AssetType, load_spritesheet},
+    enemy::create_enemy,
 };
 
 struct GameplayState;
@@ -47,9 +49,14 @@ impl SimpleState for GameplayState {
         let sprite_sheet_map = SpriteSheetMap::new(world);
         let sprite_sheet = sprite_sheet_map.get(AssetType::Floor).unwrap();
 
-        create_enemy(world, sprite_sheet.clone(), Vector3::new(8.0, 200.0, 0.0));
-        let tower_pos = Vector3::new(128.0, 8.0, 0.0);
-        create_tower(world, sprite_sheet.clone(), tower_pos);
+        for i in 0..6 {
+            create_enemy(world, sprite_sheet.clone(), Vector3::new((i as f32) * -64.0, 160.0, 0.0));
+        }
+
+        for i in 0..6 {
+            let tower_pos = Vector3::new(64.0 + ((i as f32) * 32.0), 128.0, 0.0);
+            create_tower(world, sprite_sheet.clone(), tower_pos);
+        }
 
         world.add_resource(sprite_sheet_map);
         init_camera(world);
@@ -93,25 +100,5 @@ fn init_camera(world: &mut World) {
     world.create_entity()
         .with(Camera::standard_2d(SCREEN_WIDTH, SCREEN_HEIGHT))
         .with(transform)
-        .build();
-}
-
-fn create_enemy(world: &mut World, sprite_sheet: Handle<SpriteSheet>, origin: Vector3<f32>) {
-    let enemy_sprite = SpriteRender {
-        sprite_sheet: sprite_sheet.clone(),
-        sprite_number: 2,
-    };
-
-    let mut transform = Transform::default();
-    transform.set_translation(origin);
-
-    let velocity = Velocity {
-        vector: Vector3::new(0.25, 0.0, 0.0),
-    };
-
-    world.create_entity()
-        .with(enemy_sprite)
-        .with(transform)
-        .with(velocity)
         .build();
 }
