@@ -79,8 +79,14 @@ impl<'s> System<'s> for TowerSystem {
         let sprite_sheet = sprite_sheet_map.get(AssetType::Floor).unwrap();
 
         for (transform, tower) in (&transforms, &mut towers).join() {
-            if let Some(enemy) = tower.target {
-                let enemy_transform = transforms.get(enemy).cloned().unwrap();
+            if let Some(enemy_entity) = tower.target {
+                let enemy_transform = match transforms.get(enemy_entity).cloned() {
+                    Some(e) => e,
+                    None => {
+                        tower.target = None;
+                        continue
+                    }
+                };
                 // If the target is too far away, stop targeting it
                 if !in_range(transform.translation(), enemy_transform.translation(), tower.range) {
                     tower.target = None;
