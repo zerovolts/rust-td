@@ -1,56 +1,28 @@
 use std::f32::INFINITY;
 
 use amethyst::{
-    prelude::*,
-    assets::{AssetStorage, Loader, Handle},
-    core::{
-        timing::Time,
-        transform::{Transform, TransformBundle},
-        math::{Vector3},
-    },
+    assets::Handle,
+    core::{math::Vector3, timing::Time, transform::Transform},
     ecs::prelude::{
-        LazyUpdate,
-        System,
-        Join,
-        Read,
-        ReadStorage,
-        WriteStorage,
-        Component,
-        DenseVecStorage,
-        Entities,
-        ReadExpect,
-        Entity,
+        Component, DenseVecStorage, Entities, Entity, Join, LazyUpdate, Read, ReadExpect,
+        ReadStorage, System, WriteStorage,
     },
-    renderer::{
-        Camera,
-        plugins::{RenderFlat2D, RenderToWindow},
-        types::DefaultBackend,
-        RenderingBundle,
-        SpriteSheet,
-        SpriteSheetFormat,
-        ImageFormat,
-        SpriteRender,
-        Texture,
-    },
-    utils::application_root_dir,
+    prelude::*,
+    renderer::{SpriteRender, SpriteSheet},
 };
 
 use crate::{
-    velocity::Velocity,
-    projectile::create_projectile,
-    sprite::{SpriteSheetMap, AssetType},
     enemy::Enemy,
+    projectile::create_projectile,
+    sprite::{AssetType, SpriteSheetMap},
 };
 
+#[derive(Component)]
 pub struct Tower {
     speed: f32,
     range: f32,
     last_fire_time: f64,
     target: Option<Entity>,
-}
-
-impl Component for Tower {
-    type Storage = DenseVecStorage<Self>;
 }
 
 pub struct TowerSystem;
@@ -67,15 +39,7 @@ impl<'s> System<'s> for TowerSystem {
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (
-            mut towers,
-            transforms,
-            enemies,
-            lazy_update,
-            sprite_sheet_map,
-            time,
-            entities
-        ) = data;
+        let (mut towers, transforms, enemies, lazy_update, sprite_sheet_map, time, entities) = data;
         let sprite_sheet = sprite_sheet_map.get(AssetType::Floor).unwrap();
 
         for (transform, tower) in (&transforms, &mut towers).join() {
@@ -84,11 +48,15 @@ impl<'s> System<'s> for TowerSystem {
                     Some(e) => e,
                     None => {
                         tower.target = None;
-                        continue
+                        continue;
                     }
                 };
                 // If the target is too far away, stop targeting it
-                if !in_range(transform.translation(), enemy_transform.translation(), tower.range) {
+                if !in_range(
+                    transform.translation(),
+                    enemy_transform.translation(),
+                    tower.range,
+                ) {
                     tower.target = None;
                     continue;
                 }
@@ -96,16 +64,26 @@ impl<'s> System<'s> for TowerSystem {
                 let current_time = time.absolute_time_seconds();
                 if tower.last_fire_time + (tower.speed as f64) < current_time {
                     tower.last_fire_time = current_time;
-                    create_projectile(&entities, &lazy_update, sprite_sheet.clone(), *transform.translation(), *enemy_transform.translation(), 1.0);
+                    create_projectile(
+                        &entities,
+                        &lazy_update,
+                        sprite_sheet.clone(),
+                        *transform.translation(),
+                        *enemy_transform.translation(),
+                        1.0,
+                    );
                 }
-            }
-            else { 
+            } else {
                 // Iterate over enemies and set closest one as target
                 let mut closest_enemy: Option<Entity> = None;
                 let mut closest_len = INFINITY;
-                for (entity, enemy, enemy_transform) in (&entities, &enemies, &transforms).join() {
+                for (entity, _enemy, enemy_transform) in (&entities, &enemies, &transforms).join() {
                     let len_sq = len_sq(&(enemy_transform.translation() - transform.translation()));
-                    if in_range(transform.translation(), enemy_transform.translation(), tower.range) {
+                    if in_range(
+                        transform.translation(),
+                        enemy_transform.translation(),
+                        tower.range,
+                    ) {
                         if len_sq < closest_len {
                             closest_enemy = Some(entity);
                             closest_len = len_sq;
@@ -142,7 +120,8 @@ pub fn create_tower(world: &mut World, sprite_sheet: Handle<SpriteSheet>, positi
         sprite_number: 0,
     };
 
-    world.create_entity()
+    world
+        .create_entity()
         .with(grass_sprite.clone())
         .with(tower)
         .with(transform.clone())

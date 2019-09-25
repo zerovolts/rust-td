@@ -1,29 +1,9 @@
 use std::collections::HashMap;
 
 use amethyst::{
+    assets::{AssetStorage, Loader},
     prelude::*,
-    assets::{AssetStorage, Loader, Handle},
-    core::{
-        transform::{Transform, TransformBundle},
-        math::{Vector3},
-    },
-    ecs::prelude::{
-        System,
-        Join,
-    },
-    renderer::{
-        Camera,
-        plugins::{RenderFlat2D, RenderToWindow},
-        types::DefaultBackend,
-        RenderingBundle,
-        SpriteSheet,
-        SpriteSheetFormat,
-        sprite::SpriteSheetHandle,
-        ImageFormat,
-        SpriteRender,
-        Texture,
-    },
-    utils::application_root_dir,
+    renderer::{sprite::SpriteSheetHandle, ImageFormat, SpriteSheet, SpriteSheetFormat, Texture},
 };
 
 #[derive(Copy, Clone, Eq, Hash, PartialEq)]
@@ -40,9 +20,7 @@ impl SpriteSheetMap {
     pub fn new(world: &mut World) -> Self {
         let mut map = HashMap::new();
         map.insert(AssetType::Floor, load_spritesheet(world));
-        SpriteSheetMap {
-            sprite_sheets: map,
-        }
+        SpriteSheetMap { sprite_sheets: map }
     }
 
     pub fn get(&self, asset_type: AssetType) -> Option<&SpriteSheetHandle> {

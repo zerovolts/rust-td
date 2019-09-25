@@ -1,45 +1,32 @@
 #[macro_use]
 extern crate specs_derive;
 
-mod velocity;
-mod projectile;
-mod tower;
-mod sprite;
 mod enemy;
-mod bounding_box;
+mod projectile;
+mod sprite;
+mod tower;
+mod velocity;
 
 use amethyst::{
-    prelude::*,
-    shrev::EventChannel,
-    assets::{AssetStorage, Loader, Handle},
     core::{
+        math::Vector3,
         transform::{Transform, TransformBundle},
-        math::{Vector3},
     },
-    ecs::prelude::{
-        System,
-        Join,
-    },
+    prelude::*,
     renderer::{
-        Camera,
         plugins::{RenderFlat2D, RenderToWindow},
         types::DefaultBackend,
-        RenderingBundle,
-        SpriteSheet,
-        SpriteSheetFormat,
-        ImageFormat,
-        SpriteRender,
-        Texture,
+        Camera, RenderingBundle,
     },
-    utils::application_root_dir, 
+    utils::application_root_dir,
 };
 
 use crate::{
-    velocity::{Velocity, VelocitySystem},
-    projectile::{create_projectile, CollisionEvent, ProjectileSystem},
-    tower::{TowerSystem, create_tower},
-    sprite::{SpriteSheetMap, AssetType, load_spritesheet},
-    enemy::{EnemySystem, create_enemy},
+    enemy::{create_enemy, EnemySystem},
+    projectile::ProjectileSystem,
+    sprite::{AssetType, SpriteSheetMap},
+    tower::{create_tower, TowerSystem},
+    velocity::VelocitySystem,
 };
 
 struct GameplayState;
@@ -52,7 +39,11 @@ impl SimpleState for GameplayState {
         let sprite_sheet = sprite_sheet_map.get(AssetType::Floor).unwrap();
 
         for i in 0..6 {
-            create_enemy(world, sprite_sheet.clone(), Vector3::new((i as f32) * -32.0, 160.0, 0.0));
+            create_enemy(
+                world,
+                sprite_sheet.clone(),
+                Vector3::new((i as f32) * -32.0, 160.0, 0.0),
+            );
         }
 
         for i in 0..6 {
@@ -61,7 +52,6 @@ impl SimpleState for GameplayState {
         }
 
         world.add_resource(sprite_sheet_map);
-        world.add_resource(EventChannel::<CollisionEvent>::new());
         init_camera(world);
     }
 }
@@ -102,7 +92,8 @@ fn init_camera(world: &mut World) {
     let mut transform = Transform::default();
     transform.set_translation_xyz(SCREEN_WIDTH * 0.5, SCREEN_HEIGHT * 0.5, 1.0);
 
-    world.create_entity()
+    world
+        .create_entity()
         .with(Camera::standard_2d(SCREEN_WIDTH, SCREEN_HEIGHT))
         .with(transform)
         .build();

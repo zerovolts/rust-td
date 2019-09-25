@@ -1,50 +1,23 @@
 use amethyst::{
-    prelude::*,
-    shrev::EventChannel,
-    assets::{Handle},
-    core::{
-        transform::{Transform},
-        math::{Vector3},
-    },
+    assets::Handle,
+    core::{math::Vector3, transform::Transform},
     ecs::prelude::{
-        LazyUpdate,
-        World,
-        Component,
-        DenseVecStorage,
-        Entities,
-        ReadExpect,
-        System,
-        Write,
-        Entity,
-        ReadStorage,
+        Component, DenseVecStorage, Entities, Join, LazyUpdate, ReadExpect, ReadStorage, System,
         WriteStorage,
-        Join,
     },
-    renderer::{
-        SpriteSheet,
-        SpriteRender,
-    },
+    renderer::{SpriteRender, SpriteSheet},
 };
 
-use crate::velocity::Velocity;
 use crate::enemy::Enemy;
-// use crate::bounding_box::BoundingBox;
+use crate::velocity::Velocity;
 
-pub struct CollisionEvent {
-    entity_a: Entity,
-    entity_b: Entity,
-}
-
+#[derive(Component)]
 pub struct Projectile {
     // TODO: make this a vec
     effect: ProjectileEffect,
 }
 
-impl Component for Projectile {
-    type Storage = DenseVecStorage<Self>;
-
-}
-
+#[allow(dead_code)]
 enum TimingFunction {
     Linear, // bullet
     EaseIn, // rocket thruster
@@ -52,6 +25,7 @@ enum TimingFunction {
     EaseInOut, // trebuchet
 }
 
+#[allow(dead_code)]
 enum ProjectileEffect {
     Damage(i32),
     DoT(i32, i32),
@@ -65,7 +39,6 @@ pub struct ProjectileSystem;
 
 impl<'s> System<'s> for ProjectileSystem {
     type SystemData = (
-        // Write<'s, EventChannel<CollisionEvent>>,
         ReadStorage<'s, Projectile>,
         ReadStorage<'s, Transform>,
         WriteStorage<'s, Enemy>,
@@ -73,18 +46,21 @@ impl<'s> System<'s> for ProjectileSystem {
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        // let (channel) = data;
         let (projectiles, transforms, mut enemies, entities) = data;
-        for (projectile_entity, projectile, projectile_transform) in (&entities, &projectiles, &transforms).join() {
+        for (projectile_entity, projectile, projectile_transform) in
+            (&entities, &projectiles, &transforms).join()
+        {
             for (enemy, enemy_transform) in (&mut enemies, &transforms).join() {
-                let distance_vector = (projectile_transform.translation() - enemy_transform.translation());
-                let distance_sq = (distance_vector.x * distance_vector.x) + (distance_vector.y * distance_vector.y);
-                if (distance_sq < 100.0) {
+                let distance_vector =
+                    projectile_transform.translation() - enemy_transform.translation();
+                let distance_sq = (distance_vector.x * distance_vector.x)
+                    + (distance_vector.y * distance_vector.y);
+                if distance_sq < 100.0 {
                     match projectile.effect {
                         ProjectileEffect::Damage(damage) => enemy.health -= damage,
-                        _ => {},
+                        _ => {}
                     }
-                    entities.delete(projectile_entity);
+                    let _ = entities.delete(projectile_entity);
                 }
             }
         }
@@ -97,7 +73,7 @@ pub fn create_projectile(
     sprite_sheet: Handle<SpriteSheet>,
     origin: Vector3<f32>,
     target: Vector3<f32>,
-    speed: f32
+    speed: f32,
 ) {
     let projectile_sprite = SpriteRender {
         sprite_sheet: sprite_sheet.clone(),
@@ -107,9 +83,7 @@ pub fn create_projectile(
     let mut transform = Transform::default();
     transform.set_translation(origin);
 
-    let mut velocity = Velocity {
-        vector: (target - origin).normalize(),
-    };
+    let velocity = Velocity::new((target - origin).normalize() * speed);
 
     let projectile = Projectile {
         effect: ProjectileEffect::Damage(10),
