@@ -1,4 +1,4 @@
 (
   title: "tower-defense",
-  dimensions: Some((640, 480)),
+  dimensions: Some((1280, 960)),
 )

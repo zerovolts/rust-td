@@ -8,7 +8,7 @@ mod tower;
 mod velocity;
 
 use amethyst::{
-    assets::{AssetStorage, Loader},
+    assets::{AssetStorage, Handle, Loader},
     core::{
         ecs::Entity,
         math::Vector3,
@@ -18,6 +18,7 @@ use amethyst::{
     prelude::*,
     renderer::{
         plugins::{RenderFlat2D, RenderToWindow},
+        sprite::{SpriteRender, SpriteSheet},
         types::DefaultBackend,
         Camera, RenderingBundle,
     },
@@ -55,9 +56,11 @@ impl SimpleState for GameplayState {
             create_tower(world, sprite_sheet.clone(), tower_pos);
         }
 
-        world.add_resource(sprite_sheet_map);
+        init_floor_tiles(world, sprite_sheet.clone());
         init_ui(world);
         init_camera(world);
+
+        world.add_resource(sprite_sheet_map);
     }
 }
 
@@ -153,4 +156,26 @@ fn init_ui(world: &mut World) {
         .build();
 
     world.add_resource(GameUi { coin_display });
+}
+
+fn init_floor_tiles(world: &mut World, sprite_sheet: Handle<SpriteSheet>) {
+    let x_tile_count = (SCREEN_WIDTH / 16.0) as i32;
+    let y_tile_count = (SCREEN_HEIGHT / 16.0) as i32;
+    for x in 0..x_tile_count {
+        for y in 0..y_tile_count {
+            let sprite_render = SpriteRender {
+                sprite_sheet: sprite_sheet.clone(),
+                sprite_number: 4,
+            };
+
+            let mut transform = Transform::default();
+            transform.set_translation_xyz(((x as f32) * 16.) + 8., ((y as f32) * 16.) + 8., -1.);
+
+            world
+                .create_entity()
+                .with(transform)
+                .with(sprite_render)
+                .build();
+        }
+    }
 }
