@@ -60,7 +60,7 @@ impl SimpleState for GameplayState {
         init_ui(world);
         init_camera(world);
 
-        world.add_resource(sprite_sheet_map);
+        world.insert(sprite_sheet_map);
     }
 }
 
@@ -155,7 +155,7 @@ fn init_ui(world: &mut World) {
         .with(coin_display_background)
         .build();
 
-    world.add_resource(GameUi { coin_display });
+    world.insert(GameUi { coin_display });
 }
 
 fn init_floor_tiles(world: &mut World, sprite_sheet: Handle<SpriteSheet>) {
