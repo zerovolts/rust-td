@@ -117,7 +117,7 @@ pub fn create_tower(world: &mut World, sprite_sheet: Handle<SpriteSheet>, positi
 
     let grass_sprite = SpriteRender {
         sprite_sheet: sprite_sheet.clone(),
-        sprite_number: 0,
+        sprite_number: 5,
     };
 
     world

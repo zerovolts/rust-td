@@ -4,6 +4,7 @@ extern crate specs_derive;
 mod enemy;
 mod projectile;
 mod sprite;
+mod tile_map;
 mod tower;
 mod velocity;
 
@@ -30,6 +31,7 @@ use crate::{
     enemy::{create_enemy, EnemySystem},
     projectile::ProjectileSystem,
     sprite::{AssetType, SpriteSheetMap},
+    tile_map::{generate_map, TileType},
     tower::{create_tower, TowerSystem},
     velocity::VelocitySystem,
 };
@@ -43,16 +45,16 @@ impl SimpleState for GameplayState {
         let sprite_sheet_map = SpriteSheetMap::new(world);
         let sprite_sheet = sprite_sheet_map.get(AssetType::Floor).unwrap();
 
-        for i in 0..6 {
+        for i in 0..24 {
             create_enemy(
                 world,
                 sprite_sheet.clone(),
-                Vector3::new((i as f32) * -32.0, 160.0, 0.0),
+                Vector3::new((i as f32) * -16.0, 160.0, 0.0),
             );
         }
 
-        for i in 0..6 {
-            let tower_pos = Vector3::new(64.0 + ((i as f32) * 32.0), 128.0, 0.0);
+        for i in 0..12 {
+            let tower_pos = Vector3::new(64.0 + ((i as f32) * 16.0), 128.0, 0.0);
             create_tower(world, sprite_sheet.clone(), tower_pos);
         }
 
@@ -161,11 +163,26 @@ fn init_ui(world: &mut World) {
 fn init_floor_tiles(world: &mut World, sprite_sheet: Handle<SpriteSheet>) {
     let x_tile_count = (SCREEN_WIDTH / 16.0) as i32;
     let y_tile_count = (SCREEN_HEIGHT / 16.0) as i32;
+
+    let mut tile_map = generate_map(x_tile_count, y_tile_count);
+    // Reroll the map until the path is at least 50 tiles long
+    while tile_map.1.path.len() < 80 {
+        tile_map = generate_map(x_tile_count, y_tile_count);
+    }
+
     for x in 0..x_tile_count {
         for y in 0..y_tile_count {
+            let tile = tile_map
+                .0
+                .get((x, y))
+                .expect(format!("No tile at location ({}, {})", x, y).as_str());
+            let sprite_number = match tile {
+                TileType::Grass => 4,
+                TileType::Rock => 2,
+            };
             let sprite_render = SpriteRender {
                 sprite_sheet: sprite_sheet.clone(),
-                sprite_number: 4,
+                sprite_number: sprite_number,
             };
 
             let mut transform = Transform::default();
