@@ -1,11 +1,15 @@
 # RustTD
 
 ## Usage
+
 Windows/Linux (Vulkan backend)
+
 ```
-cargo run
+cargo run --features vulkan
 ```
+
 Mac OSX (Metal backend)
+
 ```
 cargo run --features metal
 ```
