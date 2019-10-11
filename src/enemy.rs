@@ -46,7 +46,7 @@ impl<'s> System<'s> for EnemySystem {
 pub fn create_enemy(world: &mut World, sprite_sheet: Handle<SpriteSheet>, origin: Vector3<f32>) {
     let enemy_sprite = SpriteRender {
         sprite_sheet: sprite_sheet.clone(),
-        sprite_number: 6,
+        sprite_number: 0,
     };
 
     let mut transform = Transform::default();

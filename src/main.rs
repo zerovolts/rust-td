@@ -43,22 +43,23 @@ impl SimpleState for GameplayState {
         let world = data.world;
 
         let sprite_sheet_map = SpriteSheetMap::new(world);
-        let sprite_sheet = sprite_sheet_map.get(AssetType::Floor).unwrap();
+        let floor_tiles = sprite_sheet_map.get(AssetType::Floor).unwrap();
+        let jumping_jelly_sprites = sprite_sheet_map.get(AssetType::JumpingJelly).unwrap();
 
         for i in 0..24 {
             create_enemy(
                 world,
-                sprite_sheet.clone(),
+                jumping_jelly_sprites.clone(),
                 Vector3::new((i as f32) * -16.0, 160.0, 0.0),
             );
         }
 
         for i in 0..12 {
             let tower_pos = Vector3::new(64.0 + ((i as f32) * 16.0), 128.0, 0.0);
-            create_tower(world, sprite_sheet.clone(), tower_pos);
+            create_tower(world, floor_tiles.clone(), tower_pos);
         }
 
-        init_floor_tiles(world, sprite_sheet.clone());
+        init_floor_tiles(world, floor_tiles.clone());
         init_ui(world);
         init_camera(world);
 

@@ -10,7 +10,6 @@ specs-derive = "0.4.0"
 rand = "0.7.2"
 
 [features]
-default = ["vulkan"]
 empty = ["amethyst/empty"]
 metal = ["amethyst/metal"]
 vulkan = ["amethyst/vulkan"]

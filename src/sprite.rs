@@ -6,20 +6,34 @@ use amethyst::{
     renderer::{sprite::SpriteSheetHandle, ImageFormat, SpriteSheet, SpriteSheetFormat, Texture},
 };
 
-#[derive(Copy, Clone, Eq, Hash, PartialEq)]
-pub enum AssetType {
-    Floor,
-}
-
 #[derive(Default)]
 pub struct SpriteSheetMap {
     sprite_sheets: HashMap<AssetType, SpriteSheetHandle>,
 }
 
+#[derive(Copy, Clone, Eq, Hash, PartialEq)]
+pub enum AssetType {
+    Floor,
+    JumpingJelly,
+    SlideySlime,
+}
+
+/** The strings correspond to the names of the `png` and `ron` asset files */
+const SPRITE_SHEET_MAPPING: [(AssetType, &str); 3] = [
+    (AssetType::Floor, "floor_tiles"),
+    (AssetType::SlideySlime, "slidey_slime"),
+    (AssetType::JumpingJelly, "jumping_jelly"),
+];
+
 impl SpriteSheetMap {
     pub fn new(world: &mut World) -> Self {
         let mut map = HashMap::new();
-        map.insert(AssetType::Floor, load_spritesheet(world));
+        for sprite_sheet_tuple in SPRITE_SHEET_MAPPING.iter() {
+            map.insert(
+                sprite_sheet_tuple.0,
+                load_sprite_sheet(world, sprite_sheet_tuple.1),
+            );
+        }
         SpriteSheetMap { sprite_sheets: map }
     }
 
@@ -28,12 +42,12 @@ impl SpriteSheetMap {
     }
 }
 
-pub fn load_spritesheet(world: &mut World) -> SpriteSheetHandle {
+pub fn load_sprite_sheet(world: &mut World, asset_name: &str) -> SpriteSheetHandle {
     let texture_handle = {
         let loader = world.read_resource::<Loader>();
         let texture_storage = world.read_resource::<AssetStorage<Texture>>();
         loader.load(
-            "floor_tiles.png",
+            format!("{}.png", asset_name),
             ImageFormat::default(),
             (),
             &texture_storage,
@@ -43,7 +57,7 @@ pub fn load_spritesheet(world: &mut World) -> SpriteSheetHandle {
     let loader = world.read_resource::<Loader>();
     let spritesheet_store = world.read_resource::<AssetStorage<SpriteSheet>>();
     loader.load(
-        "floor_tiles.ron",
+        format!("{}.ron", asset_name),
         SpriteSheetFormat(texture_handle),
         (),
         &spritesheet_store,
