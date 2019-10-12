@@ -1,21 +1,30 @@
 use amethyst::{
-    assets::Handle,
     core::{math::Vector3, transform::Transform},
     ecs::prelude::{
-        Component, DenseVecStorage, Entities, Join, ReadExpect, System, Write, WriteStorage,
+        Component, DenseVecStorage, Entities, Join, LazyUpdate, ReadExpect, System, Write,
+        WriteStorage,
     },
-    prelude::*,
-    renderer::{SpriteRender, SpriteSheet},
+    renderer::SpriteRender,
     ui::UiText,
 };
 
-use crate::velocity::Velocity;
-use crate::{BuildingMaterials, GameUi};
+use crate::{
+    sprite::{AssetType, SpriteSheetMap},
+    velocity::Velocity,
+    BuildingMaterials, GameUi,
+};
 
-#[derive(Component, Default)]
+#[derive(Component)]
 pub struct Enemy {
     pub health: i32,
     pub value: i32,
+    pub enemy_type: EnemyType,
+}
+
+#[derive(Clone, Copy)]
+pub enum EnemyType {
+    JumpingJelly,
+    SlideySlime,
 }
 
 pub struct EnemySystem;
@@ -43,9 +52,19 @@ impl<'s> System<'s> for EnemySystem {
     }
 }
 
-pub fn create_enemy(world: &mut World, sprite_sheet: Handle<SpriteSheet>, origin: Vector3<f32>) {
+pub fn create_enemy(
+    entities: &Entities,
+    lazy_update: &ReadExpect<LazyUpdate>,
+    sprite_sheet_map: SpriteSheetMap,
+    origin: Vector3<f32>,
+    enemy_type: EnemyType,
+) {
+    let asset_type = match enemy_type {
+        EnemyType::JumpingJelly => AssetType::JumpingJelly,
+        EnemyType::SlideySlime => AssetType::SlideySlime,
+    };
     let enemy_sprite = SpriteRender {
-        sprite_sheet: sprite_sheet.clone(),
+        sprite_sheet: sprite_sheet_map.get(asset_type).unwrap().clone(),
         sprite_number: 0,
     };
 
@@ -57,13 +76,12 @@ pub fn create_enemy(world: &mut World, sprite_sheet: Handle<SpriteSheet>, origin
     let enemy = Enemy {
         health: 100,
         value: 10,
+        enemy_type,
     };
 
-    world
-        .create_entity()
-        .with(enemy_sprite)
-        .with(transform)
-        .with(velocity)
-        .with(enemy)
-        .build();
+    let entity = entities.create();
+    lazy_update.insert(entity, enemy_sprite);
+    lazy_update.insert(entity, transform);
+    lazy_update.insert(entity, velocity);
+    lazy_update.insert(entity, enemy);
 }

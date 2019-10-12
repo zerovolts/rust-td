@@ -6,7 +6,7 @@ use amethyst::{
     renderer::{sprite::SpriteSheetHandle, ImageFormat, SpriteSheet, SpriteSheetFormat, Texture},
 };
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct SpriteSheetMap {
     sprite_sheets: HashMap<AssetType, SpriteSheetHandle>,
 }

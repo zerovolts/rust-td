@@ -17,9 +17,9 @@ pub struct EnemyPath {
 }
 
 pub struct TileMap {
-    tiles: Vec<TileType>,
-    width: i32,
-    height: i32,
+    pub tiles: Vec<TileType>,
+    pub width: i32,
+    pub height: i32,
 }
 
 impl TileMap {

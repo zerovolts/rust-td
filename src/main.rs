@@ -3,6 +3,7 @@ extern crate specs_derive;
 
 mod enemy;
 mod projectile;
+mod spawner;
 mod sprite;
 mod tile_map;
 mod tower;
@@ -28,13 +29,16 @@ use amethyst::{
 };
 
 use crate::{
-    enemy::{create_enemy, EnemySystem},
+    enemy::EnemySystem,
     projectile::ProjectileSystem,
+    spawner::{create_spawner, SpawnerSystem},
     sprite::{AssetType, SpriteSheetMap},
-    tile_map::{generate_map, TileType},
+    tile_map::{generate_map, TileMap, TileType},
     tower::{create_tower, TowerSystem},
     velocity::VelocitySystem,
 };
+
+const MIN_PATH_LENGTH: usize = 80;
 
 struct GameplayState;
 
@@ -44,22 +48,32 @@ impl SimpleState for GameplayState {
 
         let sprite_sheet_map = SpriteSheetMap::new(world);
         let floor_tiles = sprite_sheet_map.get(AssetType::Floor).unwrap();
-        let jumping_jelly_sprites = sprite_sheet_map.get(AssetType::JumpingJelly).unwrap();
 
-        for i in 0..24 {
-            create_enemy(
-                world,
-                jumping_jelly_sprites.clone(),
-                Vector3::new((i as f32) * -16.0, 160.0, 0.0),
-            );
-        }
+        let x_tile_count = (SCREEN_WIDTH / 16.0) as i32;
+        let y_tile_count = (SCREEN_HEIGHT / 16.0) as i32;
+
+        // Reroll the map until the path is at least 80 tiles long
+        let (tile_map, enemy_path) = {
+            let mut tile_map_tuple = generate_map(x_tile_count, y_tile_count);
+            while tile_map_tuple.1.path.len() < MIN_PATH_LENGTH {
+                tile_map_tuple = generate_map(x_tile_count, y_tile_count);
+            }
+            tile_map_tuple
+        };
+
+        let spawner_position = Vector3::new(
+            (enemy_path.starting_coord.0 as f32) * 16.0 + 8.0,
+            (enemy_path.starting_coord.1 as f32) * 16.0 + 8.0,
+            0.0,
+        );
+        create_spawner(world, spawner_position);
 
         for i in 0..12 {
             let tower_pos = Vector3::new(64.0 + ((i as f32) * 16.0), 128.0, 0.0);
             create_tower(world, floor_tiles.clone(), tower_pos);
         }
 
-        init_floor_tiles(world, floor_tiles.clone());
+        init_floor_tiles(world, floor_tiles.clone(), tile_map);
         init_ui(world);
         init_camera(world);
 
@@ -93,7 +107,8 @@ fn main() -> amethyst::Result<()> {
         .with(VelocitySystem, "velocity_system", &[])
         .with(TowerSystem, "tower_system", &[])
         .with(EnemySystem, "enemy_system", &[])
-        .with(ProjectileSystem, "projectile_system", &[]);
+        .with(ProjectileSystem, "projectile_system", &[])
+        .with(SpawnerSystem, "spawner_system", &[]);
 
     let mut game = Application::new("assets/", GameplayState, game_data)?;
     game.run();
@@ -161,20 +176,10 @@ fn init_ui(world: &mut World) {
     world.insert(GameUi { coin_display });
 }
 
-fn init_floor_tiles(world: &mut World, sprite_sheet: Handle<SpriteSheet>) {
-    let x_tile_count = (SCREEN_WIDTH / 16.0) as i32;
-    let y_tile_count = (SCREEN_HEIGHT / 16.0) as i32;
-
-    let mut tile_map = generate_map(x_tile_count, y_tile_count);
-    // Reroll the map until the path is at least 50 tiles long
-    while tile_map.1.path.len() < 80 {
-        tile_map = generate_map(x_tile_count, y_tile_count);
-    }
-
-    for x in 0..x_tile_count {
-        for y in 0..y_tile_count {
+fn init_floor_tiles(world: &mut World, sprite_sheet: Handle<SpriteSheet>, tile_map: TileMap) {
+    for x in 0..tile_map.width {
+        for y in 0..tile_map.height {
             let tile = tile_map
-                .0
                 .get((x, y))
                 .expect(format!("No tile at location ({}, {})", x, y).as_str());
             let sprite_number = match tile {
