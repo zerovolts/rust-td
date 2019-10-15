@@ -27,6 +27,7 @@ use amethyst::{
     ui::{get_default_font, Anchor, FontAsset, RenderUi, UiBundle, UiImage, UiText, UiTransform},
     utils::application_root_dir,
 };
+use rand::Rng;
 
 use crate::{
     enemy::EnemySystem,
@@ -68,9 +69,15 @@ impl SimpleState for GameplayState {
         );
         create_spawner(world, spawner_position);
 
-        for i in 0..12 {
-            let tower_pos = Vector3::new(64.0 + ((i as f32) * 16.0), 128.0, 0.0);
-            create_tower(world, floor_tiles.clone(), tower_pos);
+        let mut rng = rand::thread_rng();
+        for _ in 0..16 {
+            let x = rng.gen::<i32>().abs() % x_tile_count;
+            let y = rng.gen::<i32>().abs() % y_tile_count;
+            println!("{}, {}", x, y);
+            if tile_map.get((x, y)) != Some(TileType::Rock) {
+                let tower_pos = Vector3::new((x as f32) * 16.0 + 8.0, (y as f32) * 16.0 + 8.0, 0.0);
+                create_tower(world, floor_tiles.clone(), tower_pos);
+            }
         }
 
         init_floor_tiles(world, floor_tiles.clone(), tile_map);
