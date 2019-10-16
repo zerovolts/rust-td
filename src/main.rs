@@ -9,18 +9,25 @@ mod tile_map;
 mod tower;
 mod velocity;
 
+use std::time::Duration;
+
 use amethyst::{
     animation::{
         get_animation_set, AnimationBundle, AnimationCommand, AnimationControlSet, AnimationSet,
         AnimationSetPrefab, EndControl,
     },
-    assets::{AssetStorage, Handle, Loader, PrefabData, PrefabLoader, PrefabLoaderSystemDesc, ProgressCounter, RonFormat},
+    assets::{
+        AssetStorage, Handle, Loader, PrefabData, PrefabLoader, PrefabLoaderSystemDesc,
+        ProgressCounter, RonFormat,
+    },
     core::{
+        ecs::Entity,
+        frame_limiter::FrameRateLimitStrategy,
         math::Vector3,
         transform::{Transform, TransformBundle},
     },
     derive::PrefabData,
-    ecs::{prelude::Entity, Entities, Join, ReadStorage, WriteStorage},
+    ecs::{Entities, Join, ReadStorage, WriteStorage},
     error::Error,
     input::{InputBundle, StringBindings},
     prelude::*,
@@ -61,7 +68,7 @@ struct MyPrefabData {
     // Information for rendering a scene with sprites
     sprite_scene: SpriteScenePrefab,
     // Аll animations that can be run on the entity
-    animation_set: AnimationSetPrefab<AssetType, SpriteRender>
+    animation_set: AnimationSetPrefab<AssetType, SpriteRender>,
 }
 
 impl SimpleState for GameplayState {
@@ -115,11 +122,11 @@ impl SimpleState for GameplayState {
             )
         });
 
-
-        init_floor_tiles(world, floor_tiles.clone(), tile_map);
+        init_floor_tiles(world, floor_tiles.clone(), &tile_map);
         init_ui(world);
         init_camera(world);
 
+        world.insert(tile_map);
         world.insert(sprite_sheet_map);
         world.create_entity().with(jumping_jelly_prefab).build();
     }
@@ -159,8 +166,6 @@ impl SimpleState for GameplayState {
         Trans::None
     }
 }
-
-
 
 fn main() -> amethyst::Result<()> {
     amethyst::start_logger(Default::default());
@@ -203,7 +208,12 @@ fn main() -> amethyst::Result<()> {
         .with(ProjectileSystem, "projectile_system", &[])
         .with(SpawnerSystem, "spawner_system", &[]);
 
-    let mut game = Application::new("assets/", GameplayState::default(), game_data)?;
+    let mut game = Application::build("assets/", GameplayState::default())?
+        .with_frame_limit(
+            FrameRateLimitStrategy::SleepAndYield(Duration::from_millis(2)),
+            60,
+        )
+        .build(game_data)?;
     game.run();
 
     Ok(())
@@ -269,7 +279,7 @@ fn init_ui(world: &mut World) {
     world.insert(GameUi { coin_display });
 }
 
-fn init_floor_tiles(world: &mut World, sprite_sheet: Handle<SpriteSheet>, tile_map: TileMap) {
+fn init_floor_tiles(world: &mut World, sprite_sheet: Handle<SpriteSheet>, tile_map: &TileMap) {
     for x in 0..tile_map.width {
         for y in 0..tile_map.height {
             let tile = tile_map
