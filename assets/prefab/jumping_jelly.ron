@@ -1,0 +1,89 @@
+#![enable(implicit_some)]
+/*!
+    @import /amethyst_assets/src/prefab/mod.rs#Prefab
+    @import ../../src/main.rs#MyPrefabData
+    Prefab<MyPrefabData>
+*/
+
+Prefab(
+    entities: [
+        // jumping jelly
+        PrefabEntity(
+            data: MyPrefabData(
+                // SpriteScenePrefab
+                sprite_scene: (
+                    // SpriteSheetPrefab with index 0
+                    sheet: Sheet(
+                        // TexturePrefab
+                        texture: File("jumping_jelly.png", (
+                            "IMAGE", (
+                                sampler_info: (
+                                    min_filter: Nearest,
+                                    mag_filter: Nearest,
+                                    mip_filter: Nearest,
+                                    wrap_mode: (Tile, Tile, Tile),
+                                    lod_bias: (0),
+                                    lod_range: (
+                                        start: ( 0 ),
+                                        end: ( 8000 ),
+                                    ),
+                                    comparison: None,
+                                    border: (0),
+                                    anisotropic: Off,
+                                ),
+                            ),
+                        )),
+                        sprites: [
+                            // Green jumping jelly sprites
+                            // Sprites with indexes from 0 to 16
+                            Grid((
+                                texture_width: 256,
+                                texture_height: 64,
+                                columns: 16,
+                                rows: 1,
+                                cell_size: (16, 16),
+                            )),
+                        ],
+                        // optional
+                        name: "jumping_jelly",
+                    ),
+                    // SpriteRenderPrefab
+                    render: (
+                        sheet: "jumping_jelly",
+                        sprite_number: 0,
+                    ),
+                    // Transform
+                    transform: (
+                        translation: (150.0, 37.5, 0.0),
+                    ),
+                ),
+                // AnimationSetPrefab
+                animation_set: (
+                    animations: [
+                        (
+                            // AssetType
+                            JumpingJelly,
+                            (
+                                samplers: [
+                                    (
+                                        0,
+                                        // Only SpriteIndex channel allowed for SpriteRender in AnimationSetPrefab
+                                        SpriteIndex,
+                                        (
+                                            // Time of key frames
+                                            input: [0.0, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9],
+                                            // Sprite indexes from SpriteSheet for key frames
+                                            output: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+                                            // Sprites can only ever be animated with Step
+                                            function: Step,
+                                        ),
+                                    ),
+                                ],
+                            ),
+                        ),
+                    ],
+                ),
+            ),
+        ),
+    ],
+)

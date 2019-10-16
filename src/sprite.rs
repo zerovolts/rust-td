@@ -5,13 +5,14 @@ use amethyst::{
     prelude::*,
     renderer::{sprite::SpriteSheetHandle, ImageFormat, SpriteSheet, SpriteSheetFormat, Texture},
 };
+use serde::{Deserialize, Serialize};
 
 #[derive(Default, Clone)]
 pub struct SpriteSheetMap {
     sprite_sheets: HashMap<AssetType, SpriteSheetHandle>,
 }
 
-#[derive(Copy, Clone, Eq, Hash, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Deserialize, Serialize)]
 pub enum AssetType {
     Floor,
     JumpingJelly,

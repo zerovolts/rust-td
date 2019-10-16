@@ -10,17 +10,23 @@ mod tower;
 mod velocity;
 
 use amethyst::{
-    assets::{AssetStorage, Handle, Loader},
+    animation::{
+        get_animation_set, AnimationBundle, AnimationCommand, AnimationControlSet, AnimationSet,
+        AnimationSetPrefab, EndControl,
+    },
+    assets::{AssetStorage, Handle, Loader, PrefabData, PrefabLoader, PrefabLoaderSystemDesc, ProgressCounter, RonFormat},
     core::{
-        ecs::Entity,
         math::Vector3,
         transform::{Transform, TransformBundle},
     },
+    derive::PrefabData,
+    ecs::{prelude::Entity, Entities, Join, ReadStorage, WriteStorage},
+    error::Error,
     input::{InputBundle, StringBindings},
     prelude::*,
     renderer::{
         plugins::{RenderFlat2D, RenderToWindow},
-        sprite::{SpriteRender, SpriteSheet},
+        sprite::{prefab::SpriteScenePrefab, SpriteRender, SpriteSheet},
         types::DefaultBackend,
         Camera, RenderingBundle,
     },
@@ -39,14 +45,30 @@ use crate::{
     velocity::VelocitySystem,
 };
 
+use serde::Deserialize;
+
 const MIN_PATH_LENGTH: usize = 80;
 
-struct GameplayState;
+#[derive(Default)]
+struct GameplayState {
+    // A progress tracker to check that assets are loaded
+    pub progress_counter: Option<ProgressCounter>,
+}
+
+// Loading data for one entity
+#[derive(Debug, Clone, Deserialize, PrefabData)]
+struct MyPrefabData {
+    // Information for rendering a scene with sprites
+    sprite_scene: SpriteScenePrefab,
+    // Аll animations that can be run on the entity
+    animation_set: AnimationSetPrefab<AssetType, SpriteRender>
+}
 
 impl SimpleState for GameplayState {
     fn on_start(&mut self, data: StateData<'_, GameData<'_, '_>>) {
         let world = data.world;
 
+        /* Generate map */
         let sprite_sheet_map = SpriteSheetMap::new(world);
         let floor_tiles = sprite_sheet_map.get(AssetType::Floor).unwrap();
 
@@ -62,6 +84,7 @@ impl SimpleState for GameplayState {
             tile_map_tuple
         };
 
+        /* Enemy Spawner */
         let spawner_position = Vector3::new(
             (enemy_path.starting_coord.0 as f32) * 16.0 + 8.0,
             (enemy_path.starting_coord.1 as f32) * 16.0 + 8.0,
@@ -80,13 +103,64 @@ impl SimpleState for GameplayState {
             }
         }
 
+        /* Initialise animated entities */
+        // Create new progress counter
+        self.progress_counter = Some(Default::default());
+        // Starts asset loading
+        let jumping_jelly_prefab = world.exec(|loader: PrefabLoader<'_, MyPrefabData>| {
+            loader.load(
+                "prefab/jumping_jelly.ron",
+                RonFormat,
+                self.progress_counter.as_mut().unwrap(),
+            )
+        });
+
+
         init_floor_tiles(world, floor_tiles.clone(), tile_map);
         init_ui(world);
         init_camera(world);
 
         world.insert(sprite_sheet_map);
+        world.create_entity().with(jumping_jelly_prefab).build();
+    }
+
+    fn update(&mut self, data: &mut StateData<'_, GameData<'_, '_>>) -> SimpleTrans {
+        // Checks if we are still loading data
+        if let Some(ref progress_counter) = self.progress_counter {
+            // Checks progress
+            if progress_counter.is_complete() {
+                let StateData { world, .. } = data;
+                // Execute a pass similar to a system
+                world.exec(
+                    |(entities, animation_sets, mut control_sets): (
+                        Entities,
+                        ReadStorage<AnimationSet<AssetType, SpriteRender>>,
+                        WriteStorage<AnimationControlSet<AssetType, SpriteRender>>,
+                    )| {
+                        // For each entity that has AnimationSet
+                        for (entity, animation_set) in (&entities, &animation_sets).join() {
+                            // Creates a new AnimationControlSet for the entity
+                            let control_set = get_animation_set(&mut control_sets, entity).unwrap();
+                            // Adds the `JumpingJelly` animation to AnimationControlSet and loops infinitely
+                            control_set.add_animation(
+                                AssetType::JumpingJelly,
+                                &animation_set.get(&AssetType::JumpingJelly).unwrap(),
+                                EndControl::Loop(None),
+                                1.0,
+                                AnimationCommand::Start,
+                            );
+                        }
+                    },
+                );
+                // All data loaded
+                self.progress_counter = None;
+            }
+        }
+        Trans::None
     }
 }
+
+
 
 fn main() -> amethyst::Result<()> {
     amethyst::start_logger(Default::default());
@@ -107,8 +181,20 @@ fn main() -> amethyst::Result<()> {
     let input_bundle = InputBundle::<StringBindings>::new();
 
     let game_data = GameDataBuilder::default()
+        .with_system_desc(
+            PrefabLoaderSystemDesc::<MyPrefabData>::default(),
+            "scene_loader",
+            &[],
+        )
+        .with_bundle(AnimationBundle::<AssetType, SpriteRender>::new(
+            "sprite_animation_control",
+            "sprite_sampler_interpolation",
+        ))?
         .with_bundle(rendering_bundle)?
-        .with_bundle(TransformBundle::new())?
+        .with_bundle(
+            TransformBundle::new()
+                .with_dep(&["sprite_animation_control", "sprite_sampler_interpolation"]),
+        )?
         .with_bundle(UiBundle::<StringBindings>::new())?
         .with_bundle(input_bundle)?
         .with(VelocitySystem, "velocity_system", &[])
@@ -117,7 +203,7 @@ fn main() -> amethyst::Result<()> {
         .with(ProjectileSystem, "projectile_system", &[])
         .with(SpawnerSystem, "spawner_system", &[]);
 
-    let mut game = Application::new("assets/", GameplayState, game_data)?;
+    let mut game = Application::new("assets/", GameplayState::default(), game_data)?;
     game.run();
 
     Ok(())
