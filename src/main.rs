@@ -41,6 +41,7 @@ use amethyst::{
     utils::application_root_dir,
 };
 use rand::Rng;
+use serde::Deserialize;
 
 use crate::{
     enemy::EnemySystem,
@@ -52,8 +53,6 @@ use crate::{
     velocity::VelocitySystem,
 };
 
-use serde::Deserialize;
-
 const MIN_PATH_LENGTH: usize = 80;
 
 #[derive(Default)]
@@ -64,7 +63,7 @@ struct GameplayState {
 
 // Loading data for one entity
 #[derive(Debug, Clone, Deserialize, PrefabData)]
-struct MyPrefabData {
+struct JumpingJellyPrefab {
     // Information for rendering a scene with sprites
     sprite_scene: SpriteScenePrefab,
     // Аll animations that can be run on the entity
@@ -110,13 +109,13 @@ impl SimpleState for GameplayState {
             }
         }
 
-        /* Initialise animated entities */
+        /* Initialize animated entities */
         // Create new progress counter
         self.progress_counter = Some(Default::default());
         // Starts asset loading
-        let jumping_jelly_prefab = world.exec(|loader: PrefabLoader<'_, MyPrefabData>| {
+        let jumping_jelly_prefab = world.exec(|loader: PrefabLoader<'_, JumpingJellyPrefab>| {
             loader.load(
-                "prefab/jumping_jelly.ron",
+                "prefabs/jumping_jelly.ron",
                 RonFormat,
                 self.progress_counter.as_mut().unwrap(),
             )
@@ -187,7 +186,7 @@ fn main() -> amethyst::Result<()> {
 
     let game_data = GameDataBuilder::default()
         .with_system_desc(
-            PrefabLoaderSystemDesc::<MyPrefabData>::default(),
+            PrefabLoaderSystemDesc::<JumpingJellyPrefab>::default(),
             "scene_loader",
             &[],
         )
