@@ -127,7 +127,13 @@ impl SimpleState for GameplayState {
 
         world.insert(tile_map);
         world.insert(sprite_sheet_map);
-        world.create_entity().with(jumping_jelly_prefab).build();
+        // Create one set of entities from the prefab.
+        (0..1).for_each(|_| {
+            world
+                .create_entity()
+                .with(jumping_jelly_prefab.clone())
+                .build();
+        });
     }
 
     fn update(&mut self, data: &mut StateData<'_, GameData<'_, '_>>) -> SimpleTrans {
